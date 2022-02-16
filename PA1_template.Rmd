@@ -1,0 +1,167 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## Loading and preprocessing the data
+
+The first part of the project requires the data to be fetched and processed 
+
+```{r Datafetch}
+## reading activity data from zipped folder 
+
+File_name <- unzip("activity.zip", list=TRUE)
+Activity_Data <- read.table(unz("activity.zip", File_name$Name),header=T, quote="\"", sep=",")
+
+```
+
+##  What is mean total number of steps taken per day?
+
+Includes the required histogram 
+
+
+```{r Histogram, echo=TRUE}
+daywise_data <- tapply(Activity_Data$steps,as.Date(Activity_Data$date,"%Y-%m-%d"),sum)
+hist(daywise_data,xlab = "Total number of steps taken each day")
+```
+
+Also the mean and median calculations day wise 
+
+
+```{r mean_med, echo=TRUE}
+Act_Data_mean <- tapply(Activity_Data$steps, Activity_Data$date, mean)
+Act_Data_med  <- tapply(Activity_Data$steps, Activity_Data$date, median)
+
+```
+
+Value of mean 
+```{r printm, echo=TRUE}
+print (Act_Data_mean)
+```
+value of median 
+```{r printmed, echo=TRUE}
+print (Act_Data_med)
+```
+
+## What is the average daily activity pattern?
+
+```{r drawplot, echo=TRUE}
+Activity_Data_compl <- subset(Activity_Data,complete.cases(Activity_Data))
+mean_steps <- tapply(Activity_Data_compl$steps, Activity_Data_compl$interval, mean)
+
+plot(names(mean_steps),mean_steps,type = "l",xlab = "Interval",ylab = "No of Steps")
+```
+
+Maximum Number of steps 
+```{r printmax, echo=TRUE}
+## 5 min Interval with max steps 
+Max_Mean_steps <- mean_steps[mean_steps== max(mean_steps)]
+print(Max_Mean_steps)
+```
+
+Drawing the same on the plot i.e the Interval with max value of steps 
+```{r drawabline, echo=TRUE}
+Activity_Data_compl <- subset(Activity_Data,complete.cases(Activity_Data))
+mean_steps <- tapply(Activity_Data_compl$steps, Activity_Data_compl$interval, mean)
+
+plot(names(mean_steps),mean_steps,type = "l",xlab = "Interval",ylab = "No of Steps")
+Max_Mean_steps <- mean_steps[mean_steps== max(mean_steps)]
+abline(v=names(Max_Mean_steps),h=Max_Mean_steps,col="Blue")
+
+```
+
+## Inputing missing values
+
+1.Total Number of missing values in the Dataset 
+
+
+```{r missing, echo=TRUE}
+Activity_Data_compl <- subset(Activity_Data,complete.cases(Activity_Data))
+Activity_Data_missing <- subset(Activity_Data,is.na(Activity_Data$steps))
+Rows_With_NA <- sum(is.na(Activity_Data))
+
+```
+
+
+2. Filling NA's and creating a new data set 
+
+```{r filldata, echo=TRUE}
+##Taking out mean for the complete cases interval wise  wise 
+##For the missing cases in the original data set we are replacing them with the 
+##mean for the data in the same interval 
+
+Activity_Data_compl_mean  <-tapply(Activity_Data_compl$steps, Activity_Data_compl$interval,mean)
+
+Updated_Activity_Data <- Activity_Data
+
+## creating the new data set with replaced NA's from the original data set.
+for (i in 1 : length(Updated_Activity_Data$interval))
+{
+   if(is.na(Updated_Activity_Data[i,]$steps) ){
+     Updated_Activity_Data[i,]$steps <- Activity_Data_compl_mean[names(Activity_Data_compl_mean) ==   Updated_Activity_Data[i,]$interval]
+  
+   }
+ 
+}
+
+
+```
+
+
+3. Histogram for the new data with NA's filled up 
+
+```{r newhist, echo=TRUE}
+daywise_data_new <- tapply(Updated_Activity_Data$steps,as.Date(Updated_Activity_Data$date,"%Y-%m-%d"),sum)
+hist(daywise_data_new,xlab = "Total number of steps taken each day(No NA's)")
+
+```
+
+4.New Means and Medians with the Updated Data set
+
+```{r newmeanmed, echo=TRUE}
+Updated_Act_Data_mean <- tapply(Updated_Activity_Data$steps, Updated_Activity_Data$date, mean)
+Updated_Act_Data_med  <- tapply(Updated_Activity_Data$steps, Updated_Activity_Data$date, median)
+
+print("Updated mean") 
+print(Updated_Act_Data_mean)
+
+print("Updated median")
+print(Updated_Act_Data_med)
+```
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+
+```{r weekday , echo=TRUE}
+library(lattice)
+
+## Adding Factor Variables based on days in The data set 
+
+
+Updated_Activity_Data$day  <- weekdays(as.Date(Updated_Activity_Data$date,format="%Y-%m-%d"))
+
+weekdays1 <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+Updated_Activity_Data$day <- factor(Updated_Activity_Data$day %in% weekdays1, levels = c(FALSE, TRUE) ,labels=c('weekend', 'weekday'))
+
+## Calculating mean for the time series plot
+Mean_Steps_df<- aggregate(steps ~ interval + day, data = Updated_Activity_Data, mean)
+
+## Making the Plot 
+
+xyplot(steps ~ interval | day, data = Mean_Steps_df, type = "l", lwd = 2,
+       layout = c(1, 2), xlab = "interval", ylab = "Number of steps")
+```
+
+
+This completes the assignment as per requirement.
+
+
+
